@@ -2,24 +2,48 @@ import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 dotenv.config();
 
-// Initialize the GoogleGenAI instance with the required telemetry header
-const apiKey = process.env.GEMINI_API_KEY || '';
+// Telemetry and health state for Gemini API
+export const geminiHealthState = {
+  model: 'gemini-3.8-flash',
+  connectionStatus: 'NOT TESTED' as 'CONNECTED' | 'CONNECTION ERROR' | 'NOT TESTED',
+  lastSuccessfulRequest: null as string | null,
+  lastError: null as string | null,
+  lastLatencyMs: 0,
+};
 
 let aiClient: GoogleGenAI | null = null;
-if (apiKey) {
-  try {
-    aiClient = new GoogleGenAI({
-      apiKey,
-      httpOptions: {
-        headers: {
-          'User-Agent': 'aistudio-build',
-        },
-      },
-    });
-  } catch (err) {
-    console.error('Failed to initialize GoogleGenAI client:', err);
+
+/**
+ * Lazily and securely get or initialize GoogleGenAI client from process.env.GEMINI_API_KEY
+ */
+export function getAiClient(): GoogleGenAI | null {
+  const apiKey = process.env.GEMINI_API_KEY || '';
+  if (!apiKey) {
+    return null;
   }
+  if (!aiClient) {
+    try {
+      aiClient = new GoogleGenAI({
+        apiKey,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          },
+        },
+      });
+    } catch (err: any) {
+      const sanitized = String(err?.message || err).replace(apiKey, '[REDACTED_API_KEY]');
+      geminiHealthState.lastError = sanitized;
+      geminiHealthState.connectionStatus = 'CONNECTION ERROR';
+      console.error('Failed to initialize GoogleGenAI client:', sanitized);
+      return null;
+    }
+  }
+  return aiClient;
 }
+
+// Initialize on module load if key is available
+getAiClient();
 
 // Token usage tracker
 export const aiUsageStats = {
@@ -38,6 +62,80 @@ function recordTokenUsage(estimatedTokens: number = 600) {
   aiUsageStats.estimatedCostUsd = Number(((aiUsageStats.tokensUsed / 1_000_000) * 0.15).toFixed(4));
   if (aiUsageStats.estimatedCostUsd >= aiUsageStats.dailyBudgetUsd) {
     aiUsageStats.quotaPaused = true;
+  }
+}
+
+/**
+ * Backend AI Test Connection function
+ * Sends a lightweight test ping to Gemini 3.8 Flash without exposing API keys.
+ */
+export async function testGeminiConnection() {
+  const start = Date.now();
+  const apiKey = process.env.GEMINI_API_KEY || '';
+
+  if (!apiKey) {
+    const errorMsg = 'GEMINI_API_KEY environment variable is not configured in server environment.';
+    geminiHealthState.connectionStatus = 'CONNECTION ERROR';
+    geminiHealthState.lastError = errorMsg;
+    return {
+      success: false,
+      model: 'gemini-3.8-flash',
+      error: errorMsg,
+      lastSuccessfulRequest: geminiHealthState.lastSuccessfulRequest,
+      lastError: errorMsg,
+    };
+  }
+
+  const client = getAiClient();
+  if (!client) {
+    const errorMsg = 'Failed to instantiate GoogleGenAI client.';
+    geminiHealthState.connectionStatus = 'CONNECTION ERROR';
+    geminiHealthState.lastError = errorMsg;
+    return {
+      success: false,
+      model: 'gemini-3.8-flash',
+      error: errorMsg,
+      lastSuccessfulRequest: geminiHealthState.lastSuccessfulRequest,
+      lastError: errorMsg,
+    };
+  }
+
+  try {
+    const response = await client.models.generateContent({
+      model: 'gemini-3.8-flash',
+      contents: 'Ping test. Reply with: Gemini API connection successful',
+    });
+
+    const latency = Date.now() - start;
+    geminiHealthState.lastLatencyMs = latency;
+    geminiHealthState.lastSuccessfulRequest = new Date().toISOString();
+    geminiHealthState.lastError = null;
+    geminiHealthState.connectionStatus = 'CONNECTED';
+    recordTokenUsage(20);
+
+    return {
+      success: true,
+      model: 'gemini-3.8-flash',
+      message: 'Gemini API connection successful',
+      lastSuccessfulRequest: geminiHealthState.lastSuccessfulRequest,
+      lastError: null,
+      latencyMs: latency,
+    };
+  } catch (err: any) {
+    let sanitizedError = String(err?.message || err || 'Gemini API call failed');
+    if (apiKey) {
+      sanitizedError = sanitizedError.replaceAll(apiKey, '[REDACTED_API_KEY]');
+    }
+    geminiHealthState.lastError = sanitizedError;
+    geminiHealthState.connectionStatus = 'CONNECTION ERROR';
+
+    return {
+      success: false,
+      model: 'gemini-3.8-flash',
+      error: sanitizedError,
+      lastSuccessfulRequest: geminiHealthState.lastSuccessfulRequest,
+      lastError: sanitizedError,
+    };
   }
 }
 

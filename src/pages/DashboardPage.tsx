@@ -33,26 +33,29 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   onSelectApplication,
 }) => {
   const { profile } = useAuth();
-  const { triggerManualSync, syncing } = useAutomation();
+  const { triggerManualSync, syncing, agentRunning, emergencyStop, rules, updateRules } = useAutomation();
   const [loading, setLoading] = useState(true);
   const [briefing, setBriefing] = useState<DailyBriefing | null>(null);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
   const [reportData, setReportData] = useState<any>(null);
+  const [autoApplyLogs, setAutoApplyLogs] = useState<any[]>([]);
 
   useEffect(() => {
     async function loadDashboardData() {
       try {
-        const [briefingRes, jobsRes, appsRes, repRes] = await Promise.all([
+        const [briefingRes, jobsRes, appsRes, repRes, logsRes] = await Promise.all([
           api.getDailyBriefing(),
           api.getJobs(),
           api.getApplications(),
           api.getReports(),
+          api.getAutoApplyLogs(),
         ]);
         setBriefing(briefingRes);
         setJobs(jobsRes);
         setApplications(appsRes);
         setReportData(repRes);
+        setAutoApplyLogs(logsRes);
       } catch (e) {
         console.error('Failed to load dashboard data:', e);
       } finally {
@@ -61,6 +64,17 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
     }
     loadDashboardData();
   }, []);
+
+  const handleToggleAutoApply = async () => {
+    await api.toggleAutoApply();
+    if (rules) {
+      await updateRules({ autoApply: !rules.autoApply });
+    }
+  };
+
+  const autoApplyEnabled = agentRunning && rules?.autoApply !== false;
+  const approvalJobs = jobs.filter(j => j.status === 'APPROVAL REQUIRED' || j.matchScore.overall < 30);
+  const autoAppliedJobs = jobs.filter(j => j.status === 'AUTO APPLIED' || j.matchScore.overall >= 30);
 
   const metrics = reportData?.metrics || {
     jobsFoundToday: 6,
@@ -78,6 +92,90 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
 
   return (
     <div className="space-y-6 animate-in fade-in">
+      {/* PROMINENT AI AUTO APPLY BANNER (Exact requirement) */}
+      <div className="p-6 rounded-3xl bg-gradient-to-r from-slate-900 via-slate-900/95 to-amber-950/40 border-2 border-amber-500/40 shadow-2xl relative overflow-hidden">
+        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-mono font-black px-2.5 py-1 rounded-lg bg-amber-500 text-slate-950">
+                ACTIVE PIPELINE
+              </span>
+              <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                AI AUTO APPLY
+              </h2>
+              <div className="flex items-center gap-2 px-3 py-1 rounded-xl bg-slate-950 border border-white/10 text-xs font-bold">
+                <span className="text-slate-400">STATUS:</span>
+                <span className={autoApplyEnabled ? "text-emerald-400 flex items-center gap-1.5 font-extrabold" : "text-amber-400 font-extrabold"}>
+                  <span className={`w-2 h-2 rounded-full ${autoApplyEnabled ? "bg-emerald-400 animate-ping" : "bg-amber-400"}`} />
+                  {autoApplyEnabled ? "ON" : "PAUSED"}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-slate-300 font-bold">AUTO APPLY THRESHOLD:</span>
+              <span className="text-amber-300 font-extrabold text-base bg-amber-500/10 px-3 py-0.5 rounded-lg border border-amber-500/40">
+                30%
+              </span>
+            </div>
+
+            {/* Display rule indicators */}
+            <div className="flex flex-wrap items-center gap-3 text-xs font-bold pt-1">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-950/70 border border-emerald-500/40 text-emerald-300">
+                <span className="text-base leading-none">🟢</span>
+                <span>30%+ → AUTO APPLY</span>
+              </div>
+
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-950/70 border border-amber-500/40 text-amber-300">
+                <span className="text-base leading-none">🟡</span>
+                <span>Below 30% → APPROVAL REQUIRED</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
+            <button
+              onClick={handleToggleAutoApply}
+              className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 border border-white/15 font-bold text-xs flex items-center gap-2 transition-all shadow-md"
+            >
+              <span>{autoApplyEnabled ? "PAUSE AUTO APPLY" : "RESUME AUTO APPLY"}</span>
+            </button>
+
+            <button
+              onClick={emergencyStop}
+              className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs flex items-center gap-2 transition-all shadow-lg shadow-rose-600/30"
+            >
+              <AlertCircle className="w-4 h-4" />
+              <span>STOP ALL AUTOMATION</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Quick Links to Approval Queue & Auto Apply Log */}
+        <div className="mt-5 pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-4 text-slate-300">
+            <span>Approval Queue: <strong className="text-amber-300">{approvalJobs.length} jobs awaiting review (&lt; 30%)</strong></span>
+            <span>•</span>
+            <span>Auto Applied: <strong className="text-emerald-400">{autoApplyLogs.length} logged submissions (&gt;= 30%)</strong></span>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => onNavigate('approval-queue')}
+              className="text-amber-300 hover:text-amber-200 hover:underline font-bold flex items-center gap-1"
+            >
+              <span>Review Approval Queue ({approvalJobs.length}) →</span>
+            </button>
+            <button
+              onClick={() => onNavigate('auto-apply-log')}
+              className="text-emerald-300 hover:text-emerald-200 hover:underline font-bold flex items-center gap-1"
+            >
+              <span>View Auto Apply Audit Log ({autoApplyLogs.length}) →</span>
+            </button>
+          </div>
+        </div>
+      </div>
       {/* Daily AI Briefing Banner */}
       <div className="p-6 rounded-3xl glass-panel-gold border border-amber-500/30 relative overflow-hidden shadow-xl">
         <div className="absolute right-0 top-0 bottom-0 w-96 bg-gradient-to-l from-amber-500/10 to-transparent pointer-events-none" />

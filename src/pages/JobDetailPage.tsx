@@ -169,6 +169,18 @@ export const JobDetailPage: React.FC<JobDetailPageProps> = ({
               <span className="text-xs text-slate-400">{job.sourceName}</span>
               <span className="text-slate-500">•</span>
               <span className="text-xs text-slate-400">Discovered {job.discoveredDate.slice(0, 10)}</span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full font-bold bg-slate-900 text-slate-200 border border-white/20">
+                STATUS: {job.status.toUpperCase()}
+              </span>
+              {job.matchScore.overall >= 30 ? (
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                  🟢 30%+ AUTO APPLY
+                </span>
+              ) : (
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                  🟡 BELOW 30% (APPROVAL REQUIRED)
+                </span>
+              )}
             </div>
             <h1 className="text-xl sm:text-2xl font-black text-white">{job.title}</h1>
             <div className="flex items-center gap-4 text-xs text-slate-300 flex-wrap pt-1">

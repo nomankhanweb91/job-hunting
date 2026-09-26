@@ -73,10 +73,11 @@ export const OnboardingWizard: React.FC<OnboardingWizardProps> = ({ onClose, onC
         noticePeriodDays: 30,
       },
       applicationRules: {
-        approvalMode: 'smart',
-        autoApply: false,
-        requireApprovalBelowMatch: 88,
-        neverApplyBelowMatch: 70,
+        approvalMode: 'auto',
+        autoApply: true,
+        autoApplyThreshold: 30, // EXACT 30% RULE
+        requireApprovalBelowMatch: 30,
+        neverApplyBelowMatch: 30,
         maxApplicationsPerDay: 15,
         maxApplicationsPerCompanyPerDay: 2,
         allowedCountries: ['United Arab Emirates', 'Saudi Arabia', 'Qatar', 'Remote'],

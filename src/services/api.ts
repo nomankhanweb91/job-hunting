@@ -11,7 +11,8 @@ import {
   ApiUsage,
   AutomationRules,
   CaseStudy,
-  ResumeVersion
+  ResumeVersion,
+  GeminiTestResponse
 } from '../types';
 
 export const api = {
@@ -267,6 +268,31 @@ export const api = {
     return res.json();
   },
 
+  // Exact 30% Rule: Approval Queue & Auto Apply Logs
+  async getApprovalQueue(): Promise<Job[]> {
+    const res = await fetch('/api/approval-queue');
+    return res.json();
+  },
+
+  async approvalQueueAction(jobId: string, action: 'approve' | 'reject' | 'save'): Promise<{ success: boolean; job: Job; action: string }> {
+    const res = await fetch('/api/approval-queue/action', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jobId, action }),
+    });
+    return res.json();
+  },
+
+  async getAutoApplyLogs(): Promise<any[]> {
+    const res = await fetch('/api/auto-apply-log');
+    return res.json();
+  },
+
+  async toggleAutoApply(): Promise<{ success: boolean; autoApply: boolean; threshold: number }> {
+    const res = await fetch('/api/automation/toggle-auto-apply', { method: 'POST' });
+    return res.json();
+  },
+
   // Automation
   async getAutomationStatus(): Promise<{ agentRunning: boolean; rules: AutomationRules }> {
     const res = await fetch('/api/automation/status');
@@ -317,6 +343,12 @@ export const api = {
   // System Health
   async getSystemHealth(): Promise<SystemHealth & { apiUsage: ApiUsage }> {
     const res = await fetch('/api/system/health');
+    return res.json();
+  },
+
+  // Test Gemini API endpoint
+  async testGeminiApi(): Promise<GeminiTestResponse> {
+    const res = await fetch('/api/ai/test', { method: 'POST' });
     return res.json();
   },
 };

@@ -20,6 +20,8 @@ import { ReportsPage } from './pages/ReportsPage';
 import { AutomationQueuePage } from './pages/AutomationQueuePage';
 import { ProfilePage } from './pages/ProfilePage';
 import { SettingsPage } from './pages/SettingsPage';
+import { ApprovalQueuePage } from './pages/ApprovalQueuePage';
+import { AutoApplyLogPage } from './pages/AutoApplyLogPage';
 import { Job, Application } from './types';
 
 function MainApp() {
@@ -89,6 +91,10 @@ function MainApp() {
               initialFilter={activeJobFilter}
             />
           )}
+
+          {currentPage === 'approval-queue' && <ApprovalQueuePage />}
+
+          {currentPage === 'auto-apply-log' && <AutoApplyLogPage />}
 
           {currentPage === 'job-detail' && selectedJob && (
             <JobDetailPage

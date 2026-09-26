@@ -31,17 +31,33 @@ export const JobFeedPage: React.FC<JobFeedPageProps> = ({ onSelectJob, initialFi
   const [activeFilter, setActiveFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sourceFilter, setSourceFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [sources, setSources] = useState<any[]>([]);
 
   const filterTabs = [
     { id: 'all', label: 'All Jobs' },
-    { id: 'best_matches', label: 'Best Matches (88%+)' },
+    { id: 'auto_apply_eligible', label: '🟢 30%+ (Auto Apply)' },
+    { id: 'approval_required', label: '🟡 Below 30% (Approval Required)' },
     { id: 'gulf', label: 'Gulf (UAE / KSA)' },
     { id: 'remote', label: 'Remote / Global' },
-    { id: 'india', label: 'India' },
     { id: 'high_salary', label: 'High Salary' },
-    { id: 'easy_apply', label: 'Easy Apply' },
     { id: 'live_only', label: 'Live Ingested Only' },
+  ];
+
+  const allStatuses = [
+    'NEW',
+    'ANALYZING',
+    'MATCHED',
+    'AUTO APPLY QUEUE',
+    'AUTO APPLIED',
+    'APPROVAL REQUIRED',
+    'APPROVED',
+    'REJECTED BY USER',
+    'APPLICATION FAILED',
+    'APPLICATION COMPLETED',
+    'INTERVIEW',
+    'REJECTED',
+    'FOLLOW-UP DUE',
   ];
 
   const loadJobs = async () => {
@@ -87,8 +103,16 @@ export const JobFeedPage: React.FC<JobFeedPageProps> = ({ onSelectJob, initialFi
       return false;
     }
 
+    // Status filter (one of 13 states)
+    if (statusFilter !== 'all') {
+      if (j.status?.toUpperCase() !== statusFilter.toUpperCase()) {
+        return false;
+      }
+    }
+
     // Category tabs
-    if (activeFilter === 'best_matches') return j.matchScore.overall >= 88;
+    if (activeFilter === 'auto_apply_eligible') return j.matchScore.overall >= 30;
+    if (activeFilter === 'approval_required') return j.matchScore.overall < 30 || j.status === 'APPROVAL REQUIRED';
     if (activeFilter === 'gulf') {
       return (
         j.country.toLowerCase().includes('united arab emirates') ||
@@ -99,9 +123,7 @@ export const JobFeedPage: React.FC<JobFeedPageProps> = ({ onSelectJob, initialFi
       );
     }
     if (activeFilter === 'remote') return j.remoteType === 'remote';
-    if (activeFilter === 'india') return j.country.toLowerCase().includes('india');
     if (activeFilter === 'high_salary') return (j.salary.min >= 25000 && j.salary.currency === 'AED') || j.salary.min >= 90000;
-    if (activeFilter === 'easy_apply') return j.easyApply;
     if (activeFilter === 'live_only') return !j.isDemo;
 
     return true;
@@ -158,6 +180,21 @@ export const JobFeedPage: React.FC<JobFeedPageProps> = ({ onSelectJob, initialFi
               {sources.map(s => (
                 <option key={s.id} value={s.id}>
                   {s.name} ({s.jobsFound})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="sm:w-56 shrink-0">
+            <select
+              value={statusFilter}
+              onChange={e => setStatusFilter(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl bg-slate-900 border border-white/10 text-slate-300 text-xs focus:outline-none focus:border-amber-400/80"
+            >
+              <option value="all">All 13 Application States</option>
+              {allStatuses.map(st => (
+                <option key={st} value={st}>
+                  {st}
                 </option>
               ))}
             </select>
@@ -226,6 +263,20 @@ export const JobFeedPage: React.FC<JobFeedPageProps> = ({ onSelectJob, initialFi
                         LIVE INGESTED
                       </span>
                     )}
+
+                    {job.matchScore.overall >= 30 ? (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                        🟢 30%+ AUTO APPLY
+                      </span>
+                    ) : (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                        🟡 BELOW 30% APPROVAL REQUIRED
+                      </span>
+                    )}
+
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full font-bold bg-slate-900 text-slate-300 border border-white/20">
+                      STATUS: {job.status.toUpperCase()}
+                    </span>
                   </div>
 
                   {/* Match percentage pill */}

@@ -4,20 +4,59 @@ export type RiskLevel = 'low' | 'review' | 'suspicious';
 export type ApprovalMode = 'manual' | 'smart' | 'auto';
 
 export type ApplicationStatus =
-  | 'prepared'
+  | 'NEW'
+  | 'ANALYZING'
+  | 'MATCHED'
+  | 'AUTO APPLY QUEUE'
+  | 'AUTO APPLIED'
+  | 'APPROVAL REQUIRED'
+  | 'APPROVED'
+  | 'REJECTED BY USER'
+  | 'APPLICATION FAILED'
+  | 'APPLICATION COMPLETED'
+  | 'INTERVIEW'
+  | 'REJECTED'
+  | 'FOLLOW-UP DUE'
+  | 'HUMAN ACTION REQUIRED'
+  // Lowercase compatibility aliases
+  | 'new'
+  | 'ready'
+  | 'saved'
+  | 'analyzing'
+  | 'matched'
+  | 'auto_applied'
   | 'approval_required'
   | 'applied'
   | 'application_failed'
-  | 'recruiter_contacted'
-  | 'recruiter_replied'
   | 'interview'
   | 'technical_round'
   | 'hr_round'
+  | 'followup_due'
   | 'offer'
   | 'rejected'
-  | 'withdrawn'
-  | 'no_response'
-  | 'followup_due';
+  | 'withdrawn';
+
+export type JobStatus = ApplicationStatus;
+
+export interface AutoApplyLogRecord {
+  id: string;
+  jobId: string;
+  jobTitle: string;
+  company: string;
+  sourceName: string;
+  jobUrl: string;
+  matchScore: number;
+  matchAnalysis: string;
+  resumeUsed: string;
+  coverLetterUsed: string;
+  applicationDate: string;
+  applicationTime: string;
+  applicationResult: string;
+  agentActions: string[];
+  errors: string | null;
+  screenshotProof?: string;
+  status: ApplicationStatus;
+}
 
 export interface User {
   id: string;
@@ -134,6 +173,7 @@ export interface MasterProfile {
 export interface AutomationRules {
   approvalMode: ApprovalMode;
   autoApply: boolean;
+  autoApplyThreshold: number; // Exactly 30% rule
   requireApprovalBelowMatch: number;
   neverApplyBelowMatch: number;
   maxApplicationsPerDay: number;
@@ -204,7 +244,7 @@ export interface Job {
   discoveredDate: string;
   deadline?: string;
   matchScore: JobMatchBreakdown;
-  status: 'new' | 'reviewed' | 'preparing' | 'ready' | 'applied' | 'saved' | 'ignored';
+  status: JobStatus;
   isDemo: boolean;
   riskLevel: RiskLevel;
   riskReason?: string;
@@ -329,13 +369,31 @@ export interface QueueTask {
 }
 
 export interface SystemHealth {
-  geminiApi: { status: 'connected' | 'error' | 'warning' | 'disabled'; latencyMs: number; model: string };
+  geminiApi: {
+    status: 'connected' | 'error' | 'warning' | 'disabled';
+    connectionStatus?: 'CONNECTED' | 'CONNECTION ERROR' | 'NOT TESTED';
+    latencyMs: number;
+    model: string;
+    lastSuccessfulRequest?: string | null;
+    lastError?: string | null;
+    quotaExceeded?: boolean;
+  };
   database: { status: 'connected' | 'error'; totalRecords: number };
   jobSources: { connected: number; total: number; lastSync: string };
   emailProvider: { status: 'connected' | 'integration_required'; provider: string };
   browserAgent: { status: 'idle' | 'running' | 'paused'; activeTasks: number };
   scheduler: { status: 'active' | 'paused'; nextRunInSec: number };
   queue: { pending: number; running: number; failed: number };
+}
+
+export interface GeminiTestResponse {
+  success: boolean;
+  model: string;
+  message?: string;
+  error?: string;
+  lastSuccessfulRequest?: string | null;
+  lastError?: string | null;
+  latencyMs?: number;
 }
 
 export interface ApiUsage {
