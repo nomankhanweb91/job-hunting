@@ -1,0 +1,6 @@
+{
+  "name": "NOMAN AI JOB HUNTER",
+  "description": "Find Jobs. Match Jobs. Apply Smarter. Track Everything. Production-ready AI job hunting platform with master profile, live ingestion, smart auto-apply, browser agent simulation, and recruiter outreach.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
