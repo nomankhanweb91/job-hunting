@@ -20,11 +20,16 @@ import {
   BookOpen,
   Plus,
   Trash2,
+  Target,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { MasterProfile } from '../types';
 
-export const ProfilePage: React.FC = () => {
+interface ProfilePageProps {
+  onNavigate?: (page: string) => void;
+}
+
+export const ProfilePage: React.FC<ProfilePageProps> = ({ onNavigate }) => {
   const { profile, updateProfile } = useAuth();
   const [activeTab, setActiveTab] = useState<string>('personal');
   const [copied, setCopied] = useState(false);
@@ -245,7 +250,18 @@ export const ProfilePage: React.FC = () => {
             </div>
 
             <div>
-              <label className="text-xs font-medium text-slate-400 block mb-1">Desired Designations (comma separated)</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-medium text-slate-400">Desired Designations</label>
+                {onNavigate && (
+                  <button
+                    type="button"
+                    onClick={() => onNavigate('target-roles')}
+                    className="text-[11px] font-bold text-amber-400 hover:text-amber-300 flex items-center gap-1"
+                  >
+                    <Target className="w-3 h-3" /> Full Matrix (160 Roles) &rarr;
+                  </button>
+                )}
+              </div>
               <input
                 type="text"
                 value={formData.desiredDesignations?.join(', ') || ''}

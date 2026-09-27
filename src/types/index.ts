@@ -140,6 +140,25 @@ export interface ResumeVersion {
   isMaster?: boolean;
 }
 
+export type RolePriority = 'HIGH' | 'MEDIUM' | 'LOW';
+
+export interface TargetRoleItem {
+  id: string;
+  name: string;
+  category: string;
+  enabled: boolean;
+  priority: RolePriority;
+  isCustom?: boolean;
+}
+
+export interface TargetRolesConfig {
+  roles: TargetRoleItem[];
+  preferredRoles: string[];
+  excludedRoles: string[];
+  preferredKeywords: string[];
+  excludedKeywords: string[];
+}
+
 export interface MasterProfile {
   personal: PersonalInfo;
   currentDesignation: string;
@@ -156,6 +175,7 @@ export interface MasterProfile {
   caseStudies: CaseStudy[];
   resumes: ResumeVersion[];
   achievements: string[];
+  targetRolesConfig?: TargetRolesConfig;
   preferences: {
     desiredRoles: string[];
     minSalary: number;
@@ -203,6 +223,7 @@ export interface JobMatchBreakdown {
   role: number;
   industry: number;
   education: number;
+  employmentType?: number;
   pros: string[];
   cons: string[];
   missingSkills: string[];

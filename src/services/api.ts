@@ -12,7 +12,8 @@ import {
   AutomationRules,
   CaseStudy,
   ResumeVersion,
-  GeminiTestResponse
+  GeminiTestResponse,
+  TargetRolesConfig
 } from '../types';
 
 export const api = {
@@ -70,6 +71,20 @@ export const api = {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(profile),
+    });
+    return res.json();
+  },
+
+  async getTargetRoles(): Promise<TargetRolesConfig> {
+    const res = await fetch('/api/profile/target-roles');
+    return res.json();
+  },
+
+  async updateTargetRoles(config: TargetRolesConfig): Promise<{ success: boolean; config: TargetRolesConfig }> {
+    const res = await fetch('/api/profile/target-roles', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config),
     });
     return res.json();
   },

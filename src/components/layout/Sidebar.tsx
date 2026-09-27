@@ -15,6 +15,7 @@ import {
   Zap,
   ShieldAlert,
   ClipboardList,
+  Target,
 } from 'lucide-react';
 import { useAutomation } from '../../context/AutomationContext';
 
@@ -29,6 +30,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate }) => 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'jobs', label: 'Job Feed', icon: Briefcase, badge: 'Active' },
+    { id: 'target-roles', label: 'Target Roles', icon: Target, badge: '160 Roles' },
     { id: 'approval-queue', label: 'Approval Queue', icon: ShieldAlert, badge: '<30%' },
     { id: 'auto-apply-log', label: 'Auto Apply Log', icon: ClipboardList, badge: '30%+' },
     { id: 'applications', label: 'Applications', icon: FileCheck2 },

@@ -22,6 +22,7 @@ import { ProfilePage } from './pages/ProfilePage';
 import { SettingsPage } from './pages/SettingsPage';
 import { ApprovalQueuePage } from './pages/ApprovalQueuePage';
 import { AutoApplyLogPage } from './pages/AutoApplyLogPage';
+import { TargetRolesPage } from './pages/TargetRolesPage';
 import { Job, Application } from './types';
 
 function MainApp() {
@@ -92,6 +93,8 @@ function MainApp() {
             />
           )}
 
+          {currentPage === 'target-roles' && <TargetRolesPage />}
+
           {currentPage === 'approval-queue' && <ApprovalQueuePage />}
 
           {currentPage === 'auto-apply-log' && <AutoApplyLogPage />}
@@ -120,7 +123,7 @@ function MainApp() {
 
           {currentPage === 'automation' && <AutomationQueuePage />}
 
-          {currentPage === 'profile' && <ProfilePage />}
+          {currentPage === 'profile' && <ProfilePage onNavigate={setCurrentPage} />}
 
           {currentPage === 'settings' && <SettingsPage />}
         </main>

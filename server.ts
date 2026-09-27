@@ -22,6 +22,7 @@ import {
   activeBrowserSessions,
 } from './server/browserAgent.js';
 import { Application, Job } from './src/types/index.js';
+import { generateDefaultTargetRolesConfig } from './src/data/defaultTargetRoles.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -95,6 +96,30 @@ app.put('/api/profile', (req, res) => {
   db.user.name = db.profile.personal.fullName;
   db.saveToDisk();
   res.json({ success: true, profile: db.profile });
+});
+
+// Dedicated Target Roles Configuration Routes
+app.get('/api/profile/target-roles', (req, res) => {
+  if (!db.profile.targetRolesConfig || !db.profile.targetRolesConfig.roles?.length) {
+    db.profile.targetRolesConfig = generateDefaultTargetRolesConfig();
+    db.saveToDisk();
+  }
+  res.json(db.profile.targetRolesConfig);
+});
+
+app.put('/api/profile/target-roles', (req, res) => {
+  const config = req.body;
+  if (!config || !Array.isArray(config.roles)) {
+    return res.status(400).json({ error: 'Invalid target roles configuration' });
+  }
+
+  db.profile.targetRolesConfig = config;
+  const enabledNames = config.roles.filter((r: any) => r.enabled).map((r: any) => r.name);
+  if (enabledNames.length > 0) {
+    db.profile.desiredDesignations = enabledNames.slice(0, 20);
+  }
+  db.saveToDisk();
+  res.json({ success: true, config: db.profile.targetRolesConfig, profile: db.profile });
 });
 
 app.post('/api/profile/parse-resume', async (req, res) => {
@@ -822,8 +847,16 @@ app.post('/api/ai/command', async (req, res) => {
   });
 });
 
+let cachedBriefing: { data: any; timestamp: number } | null = null;
+
 // 12. DAILY BRIEFING
 app.get('/api/ai/briefing', async (req, res) => {
+  const now = Date.now();
+  // Cache for 15 minutes to preserve API quota
+  if (cachedBriefing && (now - cachedBriefing.timestamp < 15 * 60 * 1000)) {
+    return res.json(cachedBriefing.data);
+  }
+
   const stats = {
     newJobsToday: db.jobs.filter(j => j.status === 'new').length,
     highMatches: db.jobs.filter(j => j.matchScore.overall >= 88).length,
@@ -834,11 +867,12 @@ app.get('/api/ai/briefing', async (req, res) => {
 
   const briefing = await generateDailyBriefingWithAI(db.profile, stats);
   if (briefing) {
+    cachedBriefing = { data: briefing, timestamp: now };
     return res.json(briefing);
   }
 
-  res.json({
-    date: '2026-09-26',
+  const fallback = {
+    date: new Date().toISOString().split('T')[0],
     greeting: `Good morning ${db.profile.personal.fullName}, your AI job hunting engine is running smoothly.`,
     summary: `We discovered ${stats.newJobsToday} new design roles today across UAE and GCC. You have ${stats.highMatches} roles with an 88%+ match score and 1 upcoming interview scheduled with Talabat.`,
     highPriorityRecommendations: [
@@ -846,7 +880,9 @@ app.get('/api/ai/briefing', async (req, res) => {
       'Send polite follow-up for Atlassian Partner role (submitted 6 days ago).',
       'Prepare Prism Design System case study walkthrough for upcoming technical interview.',
     ],
-  });
+  };
+  cachedBriefing = { data: fallback, timestamp: now };
+  res.json(fallback);
 });
 
 // 13. REPORTS & ANALYTICS
@@ -952,7 +988,7 @@ async function startServer() {
   if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: { middlewareMode: true, hmr: false },
       appType: 'spa',
     });
     app.use(vite.middlewares);

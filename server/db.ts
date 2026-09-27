@@ -12,6 +12,7 @@ import {
   CaseStudy,
   ApplicationStatus
 } from '../src/types/index.js';
+import { generateDefaultTargetRolesConfig } from '../src/data/defaultTargetRoles.js';
 import { allJobSourceAdapters } from './jobSources/adapters.js';
 
 const DATA_DIR = path.resolve(process.cwd(), 'data');
@@ -241,6 +242,7 @@ const initialProfile: MasterProfile = {
     visaRequired: false, // UAE resident
     noticePeriodDays: 30,
   },
+  targetRolesConfig: generateDefaultTargetRolesConfig(),
   applicationRules: {
     approvalMode: 'auto',
     autoApply: true,
@@ -1482,6 +1484,9 @@ class InMemoryDatabase {
         const raw = fs.readFileSync(DB_FILE, 'utf-8');
         const data = JSON.parse(raw);
         if (data.profile) this.profile = data.profile;
+        if (!this.profile.targetRolesConfig || !this.profile.targetRolesConfig.roles?.length) {
+          this.profile.targetRolesConfig = generateDefaultTargetRolesConfig();
+        }
         if (data.user) this.user = data.user;
         if (data.jobSources) this.jobSources = data.jobSources;
         if (data.jobs) this.jobs = data.jobs;
